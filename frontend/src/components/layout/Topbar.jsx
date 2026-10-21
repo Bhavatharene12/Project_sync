@@ -1,27 +1,111 @@
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useSCM } from "../../context/SCMContext";
+
+const TITLE_MAP = {
+  "/": "SCM Executive Dashboard",
+  "/automation": "SCM Action Center & Automation",
+  "/actions": "SCM Execution Center",
+  "/repository-scan": "Repository Scanner & SCM Audit",
+  "/repositories": "Repository Switcher & Manager",
+  "/github": "GitHub Connection & Access Control",
+  "/execution-history": "SCM Activity Timeline & Audit Trail",
+  "/doctor": "Repository Doctor & Diagnostics",
+  "/branch-manager": "Branch Strategy & Hygiene",
+  "/documentation": "Documentation & README Quality",
+  "/intelligence": "SCM Maturity Intelligence",
+};
+
 function Topbar() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { auditData, performScan, loading, connectionInfo } = useSCM();
+  const [quickSearch, setQuickSearch] = useState("");
+
+  const title = TITLE_MAP[location.pathname] || "SCM Assistant";
+  const repoName = auditData?.metadata?.name;
+  const owner = auditData?.metadata?.owner?.login;
+
+  const handleQuickScan = async (e) => {
+    if (e.key === "Enter" && quickSearch.trim()) {
+      navigate("/repository-scan");
+      await performScan(quickSearch.trim());
+      setQuickSearch("");
+    }
+  };
+
+  const user = connectionInfo?.user;
+  const rateLimit = connectionInfo?.rate_limit;
+
   return (
-    <div className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6">
-
-      <h2 className="text-white text-xl font-semibold">
-        Dashboard
-      </h2>
-
+    <div className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-8 sticky top-0 z-40 backdrop-blur-md bg-slate-900/90">
       <div className="flex items-center gap-4">
-
-        <input
-          type="text"
-          placeholder="Search Repository..."
-          className="bg-slate-800 text-white px-4 py-2 rounded-lg outline-none w-64"
-        />
-
-        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-          B
-        </div>
-
+        <h2 className="text-white text-lg font-semibold tracking-wide">
+          {title}
+        </h2>
+        {repoName && (
+          <span className="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-full border border-slate-700 hidden sm:inline-block">
+            Target: <strong className="text-blue-400">{owner}/{repoName}</strong>
+          </span>
+        )}
       </div>
 
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <input
+            type="text"
+            value={quickSearch}
+            onChange={(e) => setQuickSearch(e.target.value)}
+            onKeyDown={handleQuickScan}
+            disabled={loading}
+            placeholder={loading ? "Scanning repository..." : "Quick scan (e.g. owner/repo) ↵"}
+            className="bg-slate-800 text-white placeholder-slate-500 text-xs px-3.5 py-2 rounded-lg outline-none w-56 border border-slate-700 focus:border-blue-500 transition disabled:opacity-50"
+          />
+        </div>
+
+        <button
+          onClick={() => navigate("/actions")}
+          className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-2 rounded-lg font-medium transition flex items-center gap-1.5 shadow-md shadow-blue-600/20"
+        >
+          <span>🛠️</span>
+          <span className="hidden md:inline">Execution</span>
+        </button>
+
+        <button
+          onClick={() => navigate("/automation")}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded-lg font-medium transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
+        >
+          <span>⚡</span>
+          <span className="hidden md:inline">Action Center</span>
+        </button>
+
+        {/* GitHub Connection Indicator Pill */}
+        {connectionInfo?.authenticated && user ? (
+          <button
+            onClick={() => navigate("/github")}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 px-2.5 py-1.5 rounded-lg transition"
+            title={`Connected as @${user.login} (${rateLimit?.remaining || 0} API calls remaining)`}
+          >
+            <img
+              src={user.avatar_url}
+              alt={user.login}
+              className="w-5 h-5 rounded-full object-cover border border-slate-600"
+            />
+            <span className="text-xs text-white font-medium hidden sm:inline">@{user.login}</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate("/github")}
+            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-lg border border-slate-700 transition"
+          >
+            <span>🔑</span>
+            <span className="hidden sm:inline">Connect PAT</span>
+          </button>
+        )}
+      </div>
     </div>
-  )
+  );
 }
 
-export default Topbar
+export default Topbar;

@@ -4,7 +4,7 @@ import { useSCM } from "../../context/SCMContext";
 
 const TITLE_MAP = {
   "/": "Today's Workspace",
-  "/workspace": "Today's Workspace",
+  "/workspace": "Today's  Workspace",
   "/risk-analyzer": "Repository Risk Analyzer & SCM Health",
   "/release-readiness": "Release Readiness Checker",
   "/conflict-predictor": "Merge Conflict Predictor",

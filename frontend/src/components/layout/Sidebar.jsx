@@ -5,7 +5,7 @@ function Sidebar() {
   const { auditData } = useSCM();
 
   const navItems = [
-    { name: "Today's Workspace", path: "/workspace", icon: "⚡", badge: "Daily" },
+    { name: "Today's Workspace ", path: "/workspace", icon: "⚡", badge: "Daily" },
     { name: "Risk Analyzer", path: "/risk-analyzer", icon: "🛡️", badge: "Health" },
     { name: "Release Readiness", path: "/release-readiness", icon: "🚀", badge: "Pre-Flight" },
     { name: "Conflict Predictor", path: "/conflict-predictor", icon: "🔮", badge: "AI" },

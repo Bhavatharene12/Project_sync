@@ -37,7 +37,7 @@ function Layout({ children }) {
         </main>
       </div>
 
-      {/*  Unified SCM Tool Modal Host  */}
+      {/*  Unified SCM Tool Modal Host   */}
       <SCMToolModalHost />
     </div>
   );

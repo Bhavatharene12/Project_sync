@@ -68,7 +68,7 @@ function Sidebar() {
         </nav>
       </div>
 
-      {/* Active Repository Card   */}
+      {/* Active Repository Card  */}
       <div className="p-4 border-t border-slate-800/80 m-3 bg-slate-950/60 rounded-xl border border-slate-800">
         <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
           Active Repository

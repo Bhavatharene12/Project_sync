@@ -8,7 +8,7 @@ function Sidebar() {
     { name: "Today's Workspace ", path: "/workspace", icon: "⚡", badge: "Daily" },
     { name: "Risk Analyzer ", path: "/risk-analyzer", icon: "🛡️", badge: "Health" },
     { name: "Release Readiness", path: "/release-readiness", icon: "🚀", badge: "Pre-Flight" },
-    { name: "Conflict Predictor", path: "/conflict-predictor", icon: "🔮", badge: "AI" },
+    { name: "Conflict Predictor ", path: "/conflict-predictor", icon: "🔮", badge: "AI" },
     { name: "Team Change Log", path: "/team-sync", icon: "👥" },
     { name: "Missing Essentials", path: "/essentials", icon: "📦", badge: "1-Click" },
     { name: "Smart Commit Assistant", path: "/commit-builder", icon: "✍️" },

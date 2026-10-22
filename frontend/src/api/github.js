@@ -464,3 +464,228 @@ export const clearActivityTimeline = async () => {
     throw new Error(formatApiError(error), { cause: error });
   }
 };
+
+/* =========================================================================
+   SCM ASSISTANT REDESIGN API CLIENT
+   ========================================================================= */
+
+/**
+ * 1. Today's Workspace Triage
+ */
+export const getWorkspaceTriage = async (url, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/workspace`, { url, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+/**
+ * 2. Team Change Log
+ */
+export const getTeamChangeLog = async (url, hours = 72, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/team-sync`, { url, hours, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+/**
+ * 3. Missing Essentials: Status & 1-Click Install
+ */
+export const getEssentialsStatus = async (url, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/essentials/status`, { url, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+export const installEssential = async (url, path, content = null, commitMessage = null, branch = null, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(
+      `${API_BASE}/assistant/essentials/install`,
+      { url, path, content, commit_message: commitMessage, branch, token },
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+/**
+ * 4. Smart Commit Assistant
+ */
+export const synthesizeCommit = async (draftMessage, diffText = null) => {
+  try {
+    const response = await axios.post(`${API_BASE}/assistant/commit/synthesize`, {
+      draft_message: draftMessage,
+      diff_text: diffText
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+export const getRecentCommitsForAssistant = async (url, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/commit/recent`, { url, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+export const analyzeCommitWithFiles = async (url, sha, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/commit/analyze-sha`, { url, sha, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+/**
+ * 5. Contribution Doctor
+ */
+export const getContributionDiagnosis = async (url, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/contributions/diagnose`, { url, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+/**
+ * 6. Safe Branch Cleaner: Audit & Delete
+ */
+export const auditBranchesSafety = async (url, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/branches/audit`, { url, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+export const deleteBranchSafe = async (url, branchName, force = false, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(
+      `${API_BASE}/assistant/branches/delete`,
+      { url, branch_name: branchName, force, token },
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+/**
+ * 7. Upstream Fork Synchronizer: Status & Sync
+ */
+export const getForkStatus = async (url, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/fork/status`, { url, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+export const syncForkUpstream = async (url, branch = null, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/fork/sync`, { url, branch, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+/**
+ * 8. Project Review Generator: Generate & Commit
+ */
+export const getProjectReview = async (url, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/project-review`, { url, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+export const exportProjectReviewToRepo = async (url, content, path = "PROJECT_SCM_REPORT.md", token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(
+      `${API_BASE}/assistant/project-review/export`,
+      { url, content, path, token },
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+/**
+ * 9. Repository Risk Analyzer
+ */
+export const getRiskAnalysis = async (url, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/risk/analyze`, { url, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+/**
+ * 10. Release Readiness Checker
+ */
+export const getReleaseReadiness = async (url, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(`${API_BASE}/assistant/release/audit`, { url, token }, { headers });
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};
+
+/**
+ * 11. Merge Conflict Predictor
+ */
+export const predictMergeConflicts = async (url, baseBranch = null, targetBranch = null, token = null) => {
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const response = await axios.post(
+      `${API_BASE}/assistant/conflicts/predict`,
+      { url, base_branch: baseBranch, target_branch: targetBranch, token },
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(formatApiError(error), { cause: error });
+  }
+};

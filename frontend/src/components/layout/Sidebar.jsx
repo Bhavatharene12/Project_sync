@@ -5,17 +5,18 @@ function Sidebar() {
   const { auditData } = useSCM();
 
   const navItems = [
-    { name: "Dashboard", path: "/", icon: "📊" },
-    { name: "Action Center", path: "/automation", icon: "⚡", badge: "Live" },
-    { name: "SCM Execution Center", path: "/actions", icon: "🛠️", badge: "Real API" },
-    { name: "Repository Scan", path: "/repository-scan", icon: "🔍" },
-    { name: "Repository Switcher", path: "/repositories", icon: "📦" },
-    { name: "GitHub Connection", path: "/github", icon: "🔑" },
-    { name: "Activity Timeline", path: "/execution-history", icon: "📜" },
-    { name: "Repository Doctor", path: "/doctor", icon: "🩺" },
-    { name: "Branch Manager", path: "/branch-manager", icon: "🌿" },
-    { name: "Documentation", path: "/documentation", icon: "📖" },
-    { name: "SCM Intelligence", path: "/intelligence", icon: "🧠" },
+    { name: "Today's Workspace ", path: "/workspace", icon: "⚡", badge: "Daily" },
+    { name: "Risk Analyzer ", path: "/risk-analyzer", icon: "🛡️", badge: "Health" },
+    { name: "Release Readiness", path: "/release-readiness", icon: "🚀", badge: "Pre-Flight" },
+    { name: "Conflict Predictor ", path: "/conflict-predictor", icon: "🔮", badge: "AI" },
+    { name: "Team Change Log", path: "/team-sync", icon: "👥" },
+    { name: "Missing Essentials", path: "/essentials", icon: "📦", badge: "1-Click" },
+    { name: "Smart Commit Assistant", path: "/commit-builder", icon: "✍️" },
+    { name: "Contribution Doctor", path: "/contributions", icon: "🟩" },
+    { name: "Safe Branch Cleaner", path: "/branch-cleaner", icon: "🌿" },
+    { name: "Upstream Fork Sync", path: "/upstream-sync", icon: "🔄" },
+    { name: "Project Review", path: "/project-review", icon: "🎓" },
+    { name: "GitHub Settings", path: "/github", icon: "🔑" },
   ];
 
   const repoName = auditData?.metadata?.name || auditData?.report?.repository;
@@ -67,7 +68,7 @@ function Sidebar() {
         </nav>
       </div>
 
-      {/* Active Repository Card */}
+      {/* Active Repository Card  */}
       <div className="p-4 border-t border-slate-800/80 m-3 bg-slate-950/60 rounded-xl border border-slate-800">
         <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
           Active Repository
@@ -86,10 +87,10 @@ function Sidebar() {
           <div className="mt-2">
             <p className="text-xs text-slate-500 italic">No repository active</p>
             <NavLink
-              to="/repository-scan"
+              to="/workspace"
               className="text-xs text-blue-400 hover:text-blue-300 font-medium inline-block mt-1 underline"
             >
-              Scan a repo →
+              Set active repo →
             </NavLink>
           </div>
         )}

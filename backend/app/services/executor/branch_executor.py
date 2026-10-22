@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional
 from app.services.github.client import github_client
 from app.services.github.github_branches import get_branches
 from app.services.github.github_repository import get_repository
+from app.services.executor.error_handler import handle_executor_error
+from app.utils.config import settings
 
 logger = logging.getLogger("sync.executor.branch")
 
@@ -141,21 +143,39 @@ def create_branch_plan(
     return plan
 
 
-def execute_branch_action(payload: Dict[str, Any], token: Optional[str] = None) -> Dict[str, Any]:
+def execute_branch_action(
+    payload: Dict[str, Any],
+    token: Optional[str] = None,
+    simulate: bool = False
+) -> Dict[str, Any]:
     """
     Execute real branch operation on GitHub using Git Refs or Branches REST API.
     """
+    active_token = token or (settings.GITHUB_TOKEN if settings.has_github_token() else None)
+    is_simulated = simulate or payload.get("simulation", False) or not active_token
+
     owner = payload["owner"]
     repo = payload["repo"]
     action = payload["action"]
     branch_name = payload["branch_name"]
     target_branch = payload.get("target_branch")
 
+    simulated = {
+        "success": True,
+        "status": "SIMULATED",
+        "summary": f"[Simulated Execution] Branch operation '{action}' on '{branch_name}' staged and verified safely.",
+        "verified": True,
+        "verification_message": f"Simulated verification: branch rule checked for '{branch_name}'."
+    }
+
+    if is_simulated:
+        return simulated
+
     try:
         if action == "delete":
             # DELETE /repos/{owner}/{repo}/git/refs/heads/{branch}
             endpoint = f"/repos/{owner}/{repo}/git/refs/heads/{branch_name}"
-            github_client.delete(endpoint, token=token)
+            github_client.delete(endpoint, token=active_token)
             return {
                 "success": True,
                 "status": "SUCCESS",
@@ -167,12 +187,11 @@ def execute_branch_action(payload: Dict[str, Any], token: Optional[str] = None) 
         elif action == "create":
             # 1. Get SHA of target_branch (source)
             src_branch = target_branch or payload.get("default_branch", "main")
-            ref_data = github_client.get(f"/repos/{owner}/{repo}/git/refs/heads/{src_branch}", token=token, allow_404=True)
+            ref_data = github_client.get(f"/repos/{owner}/{repo}/git/refs/heads/{src_branch}", token=active_token, allow_404=True)
             source_sha = ref_data.get("object", {}).get("sha") if ref_data else None
 
             if not source_sha:
-                # fallback get commit
-                commits = github_client.get(f"/repos/{owner}/{repo}/commits", params={"per_page": 1}, token=token)
+                commits = github_client.get(f"/repos/{owner}/{repo}/commits", params={"per_page": 1}, token=active_token)
                 source_sha = commits[0]["sha"] if commits and len(commits) > 0 else "0000000"
 
             # 2. POST /repos/{owner}/{repo}/git/refs
@@ -180,7 +199,7 @@ def execute_branch_action(payload: Dict[str, Any], token: Optional[str] = None) 
                 "ref": f"refs/heads/{branch_name}",
                 "sha": source_sha
             }
-            resp = github_client.post(f"/repos/{owner}/{repo}/git/refs", json_data=body, token=token)
+            resp = github_client.post(f"/repos/{owner}/{repo}/git/refs", json_data=body, token=active_token)
             return {
                 "success": True,
                 "status": "SUCCESS",
@@ -194,14 +213,14 @@ def execute_branch_action(payload: Dict[str, Any], token: Optional[str] = None) 
         elif action == "rename":
             # POST /repos/{owner}/{repo}/branches/{branch}/rename
             body = {"new_name": target_branch}
-            resp = github_client.post(f"/repos/{owner}/{repo}/branches/{branch_name}/rename", json_data=body, token=token)
+            resp = github_client.post(f"/repos/{owner}/{repo}/branches/{branch_name}/rename", json_data=body, token=active_token)
             return {
                 "success": True,
                 "status": "SUCCESS",
                 "resource_url": f"https://github.com/{owner}/{repo}/tree/{target_branch}",
                 "summary": f"Branch '{branch_name}' renamed to '{target_branch}'.",
                 "verified": True,
-                "verification_message": f"Branch alias updated on remote repository."
+                "verification_message": "Branch alias updated on remote repository."
             }
 
         elif action == "protect":
@@ -219,7 +238,7 @@ def execute_branch_action(payload: Dict[str, Any], token: Optional[str] = None) 
                 },
                 "restrictions": None
             }
-            resp = github_client.put(f"/repos/{owner}/{repo}/branches/{branch_name}/protection", json_data=body, token=token)
+            resp = github_client.put(f"/repos/{owner}/{repo}/branches/{branch_name}/protection", json_data=body, token=active_token)
             return {
                 "success": True,
                 "status": "SUCCESS",
@@ -229,13 +248,15 @@ def execute_branch_action(payload: Dict[str, Any], token: Optional[str] = None) 
                 "verification_message": "Required PR reviews & strict status checks enabled."
             }
 
+        else:
+            raise ValueError(f"Unsupported branch action: '{action}'")
+
     except Exception as exc:
-        logger.warning(f"Error performing branch {action} on GitHub: {exc}")
-        # Safe fallback simulated receipt
-        return {
-            "success": True,
-            "status": "SIMULATED",
-            "summary": f"[Simulated Execution] Branch operation '{action}' on '{branch_name}' staged and verified safely.",
-            "verified": True,
-            "verification_message": f"Simulated verification: branch rule checked for '{branch_name}'."
-        }
+        return handle_executor_error(
+            exc=exc,
+            action_attempted=f"branch_{action}",
+            token=active_token,
+            simulation_requested=False,
+            simulated_response=None
+        )
+

@@ -5,6 +5,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from app.services.github.client import github_client
 from app.services.scm.readme_generator import generate_scm_readme
 from app.services.github.github_repository import get_repository, get_topics
+from app.services.executor.error_handler import handle_executor_error
+from app.utils.config import settings
 
 logger = logging.getLogger("sync.executor.readme")
 
@@ -162,26 +164,53 @@ def create_readme_plan(
     return plan
 
 
-def execute_readme_commit(payload: Dict[str, Any], token: Optional[str] = None) -> Dict[str, Any]:
+def execute_readme_commit(
+    payload: Dict[str, Any],
+    token: Optional[str] = None,
+    simulate: bool = False
+) -> Dict[str, Any]:
     """
     Commit the updated README directly to GitHub using the Contents API:
     PUT /repos/{owner}/{repo}/contents/{path}
     """
+    active_token = token or (settings.GITHUB_TOKEN if settings.has_github_token() else None)
+    is_simulated = simulate or payload.get("simulation", False) or not active_token
+
     owner = payload["owner"]
     repo = payload["repo"]
     path = payload.get("path", "README.md")
     content = payload["content"]
     commit_message = payload.get("commit_message", "docs(readme): update README via Sync SCM")
-    sha = payload.get("sha")
     branch = payload.get("branch", "main")
 
-    encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+    simulated = {
+        "success": True,
+        "status": "SIMULATED",
+        "commit_sha": "sim_sha_9f4b7a12e8c049d5b",
+        "resource_url": f"https://github.com/{owner}/{repo}/blob/{branch}/{path}",
+        "summary": f"[Simulated Execution] Successfully staged and verified README commit on {owner}/{repo}.",
+        "verified": True,
+        "verification_message": f"Simulation verified: verified SHA and file changes staged for {path}."
+    }
 
+    if is_simulated:
+        return simulated
+
+    # Real GitHub API execution
+    encoded_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
     body: Dict[str, Any] = {
         "message": commit_message,
         "content": encoded_content,
         "branch": branch
     }
+    sha = payload.get("sha")
+    if not sha:
+        try:
+            existing = github_client.get(f"/repos/{owner}/{repo}/contents/{path}", params={"ref": branch}, token=active_token, allow_404=True)
+            if existing and isinstance(existing, dict) and "sha" in existing:
+                sha = existing["sha"]
+        except Exception:
+            pass
     if sha:
         body["sha"] = sha
 
@@ -189,7 +218,7 @@ def execute_readme_commit(payload: Dict[str, Any], token: Optional[str] = None) 
         resp = github_client.put(
             f"/repos/{owner}/{repo}/contents/{path}",
             json_data=body,
-            token=token
+            token=active_token
         )
 
         commit_sha = resp.get("commit", {}).get("sha") if isinstance(resp, dict) else None
@@ -205,14 +234,11 @@ def execute_readme_commit(payload: Dict[str, Any], token: Optional[str] = None) 
             "verification_message": f"Verified commit {commit_sha[:8] if commit_sha else 'OK'} registered on GitHub branch '{branch}'."
         }
     except Exception as exc:
-        logger.error(f"Failed to commit README to GitHub: {exc}")
-        # If running in simulation / demo mode without write permissions:
-        return {
-            "success": True,
-            "status": "SIMULATED",
-            "commit_sha": "sim_sha_9f4b7a12e8c049d5b",
-            "resource_url": f"https://github.com/{owner}/{repo}/blob/{branch}/{path}",
-            "summary": f"[Simulated Execution] Successfully staged and verified README commit on {owner}/{repo}.",
-            "verified": True,
-            "verification_message": f"Simulation verified: verified SHA and file changes staged for {path}."
-        }
+        return handle_executor_error(
+            exc=exc,
+            action_attempted="readme_commit",
+            token=active_token,
+            simulation_requested=False,
+            simulated_response=None
+        )
+

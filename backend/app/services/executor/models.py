@@ -57,6 +57,8 @@ class PlanApprovalRequest(BaseModel):
     approved: bool
     token: Optional[str] = None
     rejection_reason: Optional[str] = None
+    simulate: bool = False
+
 
 
 class ExecutionReceipt(BaseModel):

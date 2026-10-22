@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { useSCM } from "../../context/SCMContext";
-import SCMMaturityDashboard from "../../components/ui/SCMMaturityDashboard";
 import CommitCard from "../../components/ui/CommitCard";
 import ReleaseCard from "../../components/ui/ReleaseCard";
 import WorkflowCard from "../../components/ui/WorkflowCard";
@@ -66,8 +65,6 @@ function IntelligencePage() {
         </div>
       ) : (
         <div className="space-y-8">
-          <SCMMaturityDashboard />
-
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <CommitCard commitsAudit={auditData.commits_audit} />
             <ReleaseCard releaseAudit={auditData.release_audit} />

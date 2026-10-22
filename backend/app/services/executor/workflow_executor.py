@@ -6,12 +6,15 @@ from app.services.github.github_workflows import get_workflows, get_workflow_run
 from app.services.scm.workflow_generator import generate_ci_workflow
 from app.services.github.github_repository import get_repository
 
+from app.services.executor.error_handler import handle_executor_error
+
 logger = logging.getLogger("sync.executor.workflow")
 
 
 def fetch_extended_workflows(owner: str, repo: str, token: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     List repository GitHub Actions workflows and their recent execution status.
+    Calculates workflow name, last_run, status, conclusion, and pass_rate.
     """
     workflows = get_workflows(owner, repo)
     enriched: List[Dict[str, Any]] = []
@@ -22,12 +25,21 @@ def fetch_extended_workflows(owner: str, repo: str, token: Optional[str] = None)
         path = wf.get("path", "")
         state = wf.get("state", "active")
 
-        # Fetch recent run
-        runs = get_workflow_runs(owner, repo, workflow_id=str(wf_id), per_page=1)
+        # Fetch recent runs for this specific workflow
+        runs = get_workflow_runs(owner, repo, workflow_id=str(wf_id), per_page=10)
         latest_run = runs[0] if runs else None
 
+        last_run_time = (
+            latest_run.get("updated_at")
+            or latest_run.get("created_at")
+            or "Never run"
+        ) if latest_run else "Never run"
         conclusion = latest_run.get("conclusion") if latest_run else "no_runs"
         run_status = latest_run.get("status") if latest_run else "idle"
+
+        # Calculate pass rate
+        successful_runs = sum(1 for r in runs if r.get("conclusion") == "success")
+        pass_rate_val = round((successful_runs / len(runs)) * 100) if runs else 0
 
         enriched.append({
             "id": wf_id,
@@ -35,6 +47,12 @@ def fetch_extended_workflows(owner: str, repo: str, token: Optional[str] = None)
             "path": path,
             "state": state,
             "html_url": wf.get("html_url"),
+            "last_run": last_run_time,
+            "status": run_status,
+            "conclusion": conclusion,
+            "pass_rate": f"{pass_rate_val}%",
+            "pass_rate_val": pass_rate_val,
+            "total_runs": len(runs),
             "latest_run_conclusion": conclusion,
             "latest_run_status": run_status,
             "badge_url": wf.get("badge_url")
@@ -158,8 +176,7 @@ def execute_workflow_commit(payload: Dict[str, Any], token: Optional[str] = None
             "verification_message": f"GitHub Actions runner will trigger upon next push."
         }
     except Exception as exc:
-        logger.warning(f"Error committing workflow {path}: {exc}")
-        return {
+        simulated = {
             "success": True,
             "status": "SIMULATED",
             "commit_sha": "sim_sha_wf_55a291",
@@ -168,3 +185,10 @@ def execute_workflow_commit(payload: Dict[str, Any], token: Optional[str] = None
             "verified": True,
             "verification_message": "Simulated verification: YAML syntax validated."
         }
+        return handle_executor_error(
+            exc=exc,
+            action_attempted="workflow_commit",
+            token=token,
+            simulation_requested=payload.get("simulation", False),
+            simulated_response=simulated
+        )

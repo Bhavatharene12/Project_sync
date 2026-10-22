@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 from app.services.github.client import github_client
 from app.services.executor.branch_executor import fetch_extended_branches, execute_branch_action
 from app.services.github.github_repository import get_repository
+from app.services.executor.error_handler import handle_executor_error
 
 logger = logging.getLogger("sync.executor.cleanup")
 
@@ -191,12 +192,19 @@ def execute_cleanup_task(task: Dict[str, Any], token: Optional[str] = None) -> D
                 "summary": f"Created '{path}' on branch '{branch}'.",
                 "verified": True
             }
-        except Exception:
-            return {
+        except Exception as exc:
+            simulated = {
                 "success": True,
                 "status": "SIMULATED",
                 "summary": f"[Simulated Execution] Created '{path}' on branch '{branch}'.",
                 "verified": True
             }
+            return handle_executor_error(
+                exc=exc,
+                action_attempted=f"cleanup_commit_{path}",
+                token=token,
+                simulation_requested=payload.get("simulation", False),
+                simulated_response=simulated
+            )
 
     return {"success": False, "status": "FAILED", "summary": f"Unknown cleanup task type: {task_type}"}

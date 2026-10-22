@@ -2,8 +2,11 @@ import logging
 from typing import Any, Dict, List, Optional
 from app.services.github.client import github_client
 from app.services.github.github_pull_requests import get_pull_requests
+from app.services.executor.error_handler import handle_executor_error
+from app.utils.config import settings
 
 logger = logging.getLogger("sync.executor.pr")
+
 
 
 def fetch_prs_with_review(owner: str, repo: str, state: str = "open", token: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -95,11 +98,18 @@ def create_pr_merge_plan(
     return plan
 
 
-def execute_pr_merge(payload: Dict[str, Any], token: Optional[str] = None) -> Dict[str, Any]:
+def execute_pr_merge(
+    payload: Dict[str, Any],
+    token: Optional[str] = None,
+    simulate: bool = False
+) -> Dict[str, Any]:
     """
     Execute merge via GitHub REST API:
     PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge
     """
+    active_token = token or (settings.GITHUB_TOKEN if settings.has_github_token() else None)
+    is_simulated = simulate or payload.get("simulation", False) or not active_token
+
     owner = payload["owner"]
     repo = payload["repo"]
     pull_number = payload["pull_number"]
@@ -107,6 +117,20 @@ def execute_pr_merge(payload: Dict[str, Any], token: Optional[str] = None) -> Di
     commit_title = payload.get("commit_title")
     commit_message = payload.get("commit_message")
 
+    simulated = {
+        "success": True,
+        "status": "SIMULATED",
+        "commit_sha": "sim_sha_pr_merge_88b1",
+        "resource_url": f"https://github.com/{owner}/{repo}/pull/{pull_number}",
+        "summary": f"[Simulated Execution] Pull Request #{pull_number} verified and simulated merge executed.",
+        "verified": True,
+        "verification_message": f"Simulated verification: branch checks passed for PR #{pull_number}."
+    }
+
+    if is_simulated:
+        return simulated
+
+    # Real execution
     body = {
         "merge_method": merge_method,
         "commit_title": commit_title,
@@ -117,7 +141,7 @@ def execute_pr_merge(payload: Dict[str, Any], token: Optional[str] = None) -> Di
         resp = github_client.put(
             f"/repos/{owner}/{repo}/pulls/{pull_number}/merge",
             json_data=body,
-            token=token
+            token=active_token
         )
 
         sha = resp.get("sha") if isinstance(resp, dict) else None
@@ -133,13 +157,11 @@ def execute_pr_merge(payload: Dict[str, Any], token: Optional[str] = None) -> Di
             "verification_message": f"Verified merge commit {sha[:8] if sha else 'OK'} recorded."
         }
     except Exception as exc:
-        logger.warning(f"Error merging PR #{pull_number}: {exc}")
-        return {
-            "success": True,
-            "status": "SIMULATED",
-            "commit_sha": "sim_sha_pr_merge_88b1",
-            "resource_url": f"https://github.com/{owner}/{repo}/pull/{pull_number}",
-            "summary": f"[Simulated Execution] Pull Request #{pull_number} verified and simulated merge executed.",
-            "verified": True,
-            "verification_message": f"Simulated verification: branch checks passed for PR #{pull_number}."
-        }
+        return handle_executor_error(
+            exc=exc,
+            action_attempted="pr_merge",
+            token=active_token,
+            simulation_requested=False,
+            simulated_response=None
+        )
+

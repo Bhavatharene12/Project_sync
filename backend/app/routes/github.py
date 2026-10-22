@@ -136,7 +136,35 @@ def full_scan_repository(request: RepositoryRequest):
         workflows=workflows
     )
 
-    base_response = scan_repository(request)
+    base_response = {
+        "success": True,
+        "repository": repo.get("name", repository),
+        "owner": repo.get("owner", {}).get("login", owner),
+        "description": repo.get("description"),
+        "language": repo.get("language"),
+        "stars": repo.get("stargazers_count", 0),
+        "forks": repo.get("forks_count", 0),
+        "issues": repo.get("open_issues_count", 0),
+        "default_branch": default_branch,
+
+        # Health
+        "health_score": health_result["score"],
+        "health_status": health_result["health"],
+        "ai_reasons": health_result["reasons"],
+
+        # README
+        "readme_score": readme_result["score"],
+        "readme_status": readme_result["status"],
+        "readme_strengths": readme_result["strengths"],
+        "readme_improvements": readme_result["improvements"],
+
+        # Branches
+        "branch_score": branch_result["score"],
+        "branch_status": branch_result["status"],
+        "branch_count": branch_result["total_branches"],
+        "branch_strengths": branch_result["strengths"],
+        "branch_suggestions": branch_result["suggestions"]
+    }
     return {
         **base_response,
         "recent_commits_count": len(commits),

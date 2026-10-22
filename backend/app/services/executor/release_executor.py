@@ -6,6 +6,7 @@ from app.services.github.github_commits import get_commits
 from app.services.github.github_releases import get_releases
 from app.services.github.github_tags import get_tags
 from app.services.github.github_repository import get_repository
+from app.services.executor.error_handler import handle_executor_error
 
 logger = logging.getLogger("sync.executor.release")
 
@@ -171,8 +172,7 @@ def execute_release_publish(payload: Dict[str, Any], token: Optional[str] = None
             "verification_message": f"Confirmed tag '{tag_name}' created and release notes live."
         }
     except Exception as exc:
-        logger.warning(f"Error publishing release {tag_name}: {exc}")
-        return {
+        simulated = {
             "success": True,
             "status": "SIMULATED",
             "resource_url": f"https://github.com/{owner}/{repo}/releases/tag/{tag_name}",
@@ -180,3 +180,10 @@ def execute_release_publish(payload: Dict[str, Any], token: Optional[str] = None
             "verified": True,
             "verification_message": f"Simulated verification: tag {tag_name} and changelog recorded."
         }
+        return handle_executor_error(
+            exc=exc,
+            action_attempted="release_publish",
+            token=token,
+            simulation_requested=payload.get("simulation", False),
+            simulated_response=simulated
+        )

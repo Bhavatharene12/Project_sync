@@ -9,7 +9,6 @@ import BranchCard from "../../components/ui/BranchCard";
 import CommitCard from "../../components/ui/CommitCard";
 import ReleaseCard from "../../components/ui/ReleaseCard";
 import WorkflowCard from "../../components/ui/WorkflowCard";
-import SCMMaturityDashboard from "../../components/ui/SCMMaturityDashboard";
 import SCMProblemsCard from "../../components/ui/SCMProblemsCard";
 import SCMRecommendationsCard from "../../components/ui/SCMRecommendationsCard";
 import SCMTasksCard from "../../components/ui/SCMTasksCard";
@@ -156,10 +155,7 @@ function RepositoryScan() {
             </button>
           </div>
 
-          {/* 1. SCM Maturity Radar Dashboard */}
-          <SCMMaturityDashboard />
-
-          {/* 2. Primary Metadata and Health Cards (Original extended) */}
+          {/* Primary Metadata and Health Cards (Original extended) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <RepositoryInfoCard repoData={legacyScanData} />

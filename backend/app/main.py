@@ -7,6 +7,7 @@ from app.utils.config import settings
 from app.routes.github import router as github_router
 from app.routes.scm import router as scm_router
 from app.routes.executor import router as executor_router
+from app.routes.assistant import router as assistant_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,6 +53,7 @@ app.add_middleware(
 app.include_router(github_router)
 app.include_router(scm_router)
 app.include_router(executor_router)
+app.include_router(assistant_router)
 
 
 @app.get("/")

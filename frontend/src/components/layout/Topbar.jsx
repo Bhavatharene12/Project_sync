@@ -3,17 +3,19 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useSCM } from "../../context/SCMContext";
 
 const TITLE_MAP = {
-  "/": "SCM Executive Dashboard",
-  "/automation": "SCM Action Center & Automation",
-  "/actions": "SCM Execution Center",
-  "/repository-scan": "Repository Scanner & SCM Audit",
-  "/repositories": "Repository Switcher & Manager",
-  "/github": "GitHub Connection & Access Control",
-  "/execution-history": "SCM Activity Timeline & Audit Trail",
-  "/doctor": "Repository Doctor & Diagnostics",
-  "/branch-manager": "Branch Strategy & Hygiene",
-  "/documentation": "Documentation & README Quality",
-  "/intelligence": "SCM Maturity Intelligence",
+  "/": "Today's Workspace",
+  "/workspace": "Today's  Workspace",
+  "/risk-analyzer": "Repository Risk Analyzer & SCM Health",
+  "/release-readiness": "Release Readiness Checker",
+  "/conflict-predictor": "Merge Conflict Predictor",
+  "/team-sync": "Team Change Log & Standup Digest",
+  "/essentials": "Missing Essentials",
+  "/commit-builder": "Smart Commit Assistant",
+  "/contributions": "Contribution Doctor",
+  "/branch-cleaner": "Safe Branch Cleaner",
+  "/upstream-sync": "Upstream Fork Synchronizer",
+  "/project-review": "Project SCM Review Generator",
+  "/github": "GitHub Settings & PAT",
 };
 
 function Topbar() {
@@ -64,19 +66,19 @@ function Topbar() {
         </div>
 
         <button
-          onClick={() => navigate("/actions")}
+          onClick={() => navigate("/workspace")}
           className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-2 rounded-lg font-medium transition flex items-center gap-1.5 shadow-md shadow-blue-600/20"
         >
-          <span>🛠️</span>
-          <span className="hidden md:inline">Execution</span>
+          <span>⚡</span>
+          <span className="hidden md:inline">Workspace</span>
         </button>
 
         <button
-          onClick={() => navigate("/automation")}
+          onClick={() => navigate("/essentials")}
           className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded-lg font-medium transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
         >
-          <span>⚡</span>
-          <span className="hidden md:inline">Action Center</span>
+          <span>📦</span>
+          <span className="hidden md:inline">Essentials</span>
         </button>
 
         {/* GitHub Connection Indicator Pill */}

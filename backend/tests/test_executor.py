@@ -144,8 +144,10 @@ def test_api_safe_execution_flow():
 
     # 4. Re-stage and test approval
     stage_plan(plan)
-    approve_res = apply_plan_endpoint(
-        PlanApprovalRequest(plan_id="TEST-PLAN-999", approved=True)
-    )
+    from unittest.mock import patch
+    with patch("app.services.executor.engine.execute_issue_action", return_value={"success": True, "action": "create", "issue_number": 42}):
+        approve_res = apply_plan_endpoint(
+            PlanApprovalRequest(plan_id="TEST-PLAN-999", approved=True)
+        )
     assert approve_res["success"] is True
     assert "timeline_id" in approve_res

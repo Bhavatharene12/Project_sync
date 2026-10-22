@@ -174,15 +174,36 @@ export function SCMProvider({ children }) {
     branch_suggestions: auditData.branches?.suggestions || [],
   } : null;
 
-  // Calculate composite SCM Maturity Score (0-100)
-  const scmMaturityScore = auditData ? Math.round(
-    ((auditData.health?.score || 0) * 0.20) +
-    ((auditData.readme?.score || 0) * 0.20) +
-    ((auditData.branches?.score || 0) * 0.20) +
-    ((auditData.commits_audit?.conventional_commit_rate || 0) * 0.15) +
-    ((auditData.release_audit?.semver_compliance_rate || 0) * 0.10) +
-    ((auditData.workflow_audit?.ci_pass_rate || (auditData.workflow_audit?.total_workflows > 0 ? 80 : 20)) * 0.15)
+  // Calculate composite SCM Maturity Score (0-100) using weighted formula:
+  // Health 15%, Docs 20%, Branches 20%, Commits 15%, Releases 15%, Workflows 15%
+  const scmMaturityScore = auditData ? (
+    auditData.scm_score ??
+    auditData.scoring?.overall_score ??
+    auditData.report?.overall_score ??
+    Math.round(
+      ((auditData.health?.score || 0) * 0.15) +
+      ((auditData.readme?.score || 0) * 0.20) +
+      ((auditData.branches?.score || 0) * 0.20) +
+      ((auditData.commits_audit?.conventional_commit_rate || 0) * 0.15) +
+      (((auditData.release_audit?.total_releases > 0
+        ? Math.max(auditData.release_audit?.semver_compliance_rate ?? 50, 60)
+        : (auditData.release_audit?.total_tags > 0 ? 50 : 20))) * 0.15) +
+      (((auditData.workflow_audit?.total_workflows > 0
+        ? (auditData.workflow_audit?.ci_pass_rate || 85)
+        : 20)) * 0.15)
+    )
   ) : 0;
+
+  const scmGrade = auditData?.grade ||
+    auditData?.scoring?.grade ||
+    auditData?.report?.grade ||
+    (scmMaturityScore >= 95 ? "A+" :
+     scmMaturityScore >= 89 ? "A" :
+     scmMaturityScore >= 80 ? "B+" :
+     scmMaturityScore >= 70 ? "B" :
+     scmMaturityScore >= 60 ? "C+" :
+     scmMaturityScore >= 50 ? "C" : "D");
+
 
   // Dynamic SCM Checklist calculation
   const getSmartChecklist = () => {
@@ -471,6 +492,7 @@ export function SCMProvider({ children }) {
         auditData,
         legacyScanData,
         scmMaturityScore,
+        scmGrade,
         loading,
         loadingStage,
         error,

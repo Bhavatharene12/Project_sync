@@ -2,6 +2,8 @@ import logging
 from typing import Any, Dict, List, Optional
 from app.services.github.client import github_client
 from app.services.github.github_issues import get_issues
+from app.services.executor.error_handler import handle_executor_error
+from app.utils.config import settings
 
 logger = logging.getLogger("sync.executor.issue")
 
@@ -122,25 +124,43 @@ def create_issue_plan(
     return plan
 
 
-def execute_issue_action(payload: Dict[str, Any], token: Optional[str] = None) -> Dict[str, Any]:
+def execute_issue_action(
+    payload: Dict[str, Any],
+    token: Optional[str] = None,
+    simulate: bool = False
+) -> Dict[str, Any]:
     """
     Execute issue operation via GitHub REST API.
     """
+    active_token = token or (settings.GITHUB_TOKEN if settings.has_github_token() else None)
+    is_simulated = simulate or payload.get("simulation", False) or not active_token
+
     owner = payload["owner"]
     repo = payload["repo"]
     action = payload["action"]
     issue_number = payload.get("issue_number")
 
+    simulated = {
+        "success": True,
+        "status": "SIMULATED",
+        "summary": f"[Simulated Execution] Issue operation '{action}' staged and verified safely.",
+        "verified": True,
+        "verification_message": "Simulated verification: issue lifecycle verified."
+    }
+
+    if is_simulated:
+        return simulated
+
+    # Real execution
     try:
         if action == "create":
-            # POST /repos/{owner}/{repo}/issues
             body = {
                 "title": payload["title"],
                 "body": payload.get("body") or "Automated SCM task created via Sync SCM Assistant.",
                 "labels": payload.get("labels", []),
                 "assignees": payload.get("assignees", [])
             }
-            resp = github_client.post(f"/repos/{owner}/{repo}/issues", json_data=body, token=token)
+            resp = github_client.post(f"/repos/{owner}/{repo}/issues", json_data=body, token=active_token)
             num = resp.get("number") if isinstance(resp, dict) else 1
             url = resp.get("html_url") if isinstance(resp, dict) else f"https://github.com/{owner}/{repo}/issues/{num}"
             return {
@@ -153,9 +173,8 @@ def execute_issue_action(payload: Dict[str, Any], token: Optional[str] = None) -
             }
 
         elif action == "close":
-            # PATCH /repos/{owner}/{repo}/issues/{issue_number}
             body = {"state": "closed"}
-            github_client.patch(f"/repos/{owner}/{repo}/issues/{issue_number}", json_data=body, token=token)
+            github_client.patch(f"/repos/{owner}/{repo}/issues/{issue_number}", json_data=body, token=active_token)
             return {
                 "success": True,
                 "status": "SUCCESS",
@@ -166,24 +185,26 @@ def execute_issue_action(payload: Dict[str, Any], token: Optional[str] = None) -
             }
 
         elif action == "label":
-            # POST /repos/{owner}/{repo}/issues/{issue_number}/labels
             body = {"labels": payload.get("labels", [])}
-            github_client.post(f"/repos/{owner}/{repo}/issues/{issue_number}/labels", json_data=body, token=token)
+            github_client.post(f"/repos/{owner}/{repo}/issues/{issue_number}/labels", json_data=body, token=active_token)
             return {
                 "success": True,
                 "status": "SUCCESS",
                 "resource_url": f"https://github.com/{owner}/{repo}/issues/{issue_number}",
                 "summary": f"Labels {payload.get('labels')} added to issue #{issue_number}.",
                 "verified": True,
-                "verification_message": f"Verified labels applied."
+                "verification_message": "Verified labels applied."
             }
 
+        else:
+            raise ValueError(f"Unknown issue action: {action}")
+
     except Exception as exc:
-        logger.warning(f"Error executing issue action {action}: {exc}")
-        return {
-            "success": True,
-            "status": "SIMULATED",
-            "summary": f"[Simulated Execution] Issue operation '{action}' staged and verified safely.",
-            "verified": True,
-            "verification_message": "Simulated verification: issue lifecycle verified."
-        }
+        return handle_executor_error(
+            exc=exc,
+            action_attempted=f"issue_{action}",
+            token=active_token,
+            simulation_requested=False,
+            simulated_response=None
+        )
+

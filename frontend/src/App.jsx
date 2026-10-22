@@ -3,34 +3,40 @@ import { SCMProvider } from "./context/SCMContext";
 import Layout from "./components/layout/Layout";
 import ApprovalModal from "./components/ui/ApprovalModal";
 
-import Dashboard from "./pages/Dashboard/Dashboard";
-import ActionCenterPage from "./pages/ActionCenter/ActionCenterPage";
-import ExecutionCenterPage from "./pages/ExecutionCenter/ExecutionCenterPage";
-import RepositoryScan from "./pages/RepositoryScan/RepositoryScan";
-import RepositoryManagerPage from "./pages/RepositoryManager/RepositoryManagerPage";
+import WorkspacePage from "./pages/Workspace/WorkspacePage";
+import TeamSyncPage from "./pages/TeamSync/TeamSyncPage";
+import EssentialsPage from "./pages/Essentials/EssentialsPage";
+import CommitBuilderPage from "./pages/CommitBuilder/CommitBuilderPage";
+import ContributionDoctorPage from "./pages/Contributions/ContributionDoctorPage";
+import BranchCleanerPage from "./pages/BranchCleaner/BranchCleanerPage";
+import UpstreamSyncPage from "./pages/UpstreamSync/UpstreamSyncPage";
+import ProjectReviewPage from "./pages/ProjectReview/ProjectReviewPage";
 import GitHubConnectionPage from "./pages/GitHubConnection/GitHubConnectionPage";
-import ExecutionHistoryPage from "./pages/ExecutionHistory/ExecutionHistoryPage";
-import DoctorPage from "./pages/Doctor/DoctorPage";
-import BranchManagerPage from "./pages/BranchManager/BranchManagerPage";
-import DocumentationPage from "./pages/Documentation/DocumentationPage";
-import IntelligencePage from "./pages/Intelligence/IntelligencePage";
+import RiskAnalyzerPage from "./pages/RiskAnalyzer/RiskAnalyzerPage";
+import ReleaseReadinessPage from "./pages/ReleaseReadiness/ReleaseReadinessPage";
+import ConflictPredictorPage from "./pages/ConflictPredictor/ConflictPredictorPage";
 
 function App() {
   return (
     <SCMProvider>
       <Layout>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/automation" element={<ActionCenterPage />} />
-          <Route path="/actions" element={<ExecutionCenterPage />} />
-          <Route path="/repository-scan" element={<RepositoryScan />} />
-          <Route path="/repositories" element={<RepositoryManagerPage />} />
+          {/* SCM Redesign Core Practical Features */}
+          <Route path="/" element={<WorkspacePage />} />
+          <Route path="/workspace" element={<WorkspacePage />} />
+          <Route path="/risk-analyzer" element={<RiskAnalyzerPage />} />
+          <Route path="/release-readiness" element={<ReleaseReadinessPage />} />
+          <Route path="/conflict-predictor" element={<ConflictPredictorPage />} />
+          <Route path="/team-sync" element={<TeamSyncPage />} />
+          <Route path="/essentials" element={<EssentialsPage />} />
+          <Route path="/commit-builder" element={<CommitBuilderPage />} />
+          <Route path="/contributions" element={<ContributionDoctorPage />} />
+          <Route path="/branch-cleaner" element={<BranchCleanerPage />} />
+          <Route path="/upstream-sync" element={<UpstreamSyncPage />} />
+          <Route path="/project-review" element={<ProjectReviewPage />} />
           <Route path="/github" element={<GitHubConnectionPage />} />
-          <Route path="/execution-history" element={<ExecutionHistoryPage />} />
-          <Route path="/doctor" element={<DoctorPage />} />
-          <Route path="/branch-manager" element={<BranchManagerPage />} />
-          <Route path="/documentation" element={<DocumentationPage />} />
-          <Route path="/intelligence" element={<IntelligencePage />} />
+
+          {/* Graceful Fallback for Legacy URLs */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <ApprovalModal />

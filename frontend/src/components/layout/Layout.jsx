@@ -32,7 +32,7 @@ function Layout({ children }) {
           </div>
         )}
 
-        <main className="flex-1 pb-12">
+        <main className="flex-1 px-6 py-6 md:px-10 md:py-8 w-full max-w-[1600px] mx-auto min-w-0 pb-16">
           {children}
         </main>
       </div>

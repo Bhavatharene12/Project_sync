@@ -38,6 +38,11 @@ class SCMReport(BaseModel):
     generated_at: str
     health_grade: str
     summary: str
+    overall_score: Optional[int] = None
+    grade: Optional[str] = None
+    grade_capped: bool = False
+    cap_reasons: List[str] = Field(default_factory=list)
     problems: List[SCMProblem] = Field(default_factory=list)
     recommendations: List[SCMRecommendation] = Field(default_factory=list)
     available_tasks: List[SCMTask] = Field(default_factory=list)
+

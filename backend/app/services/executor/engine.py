@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from fastapi import HTTPException
+from app.utils.config import settings
 from app.services.executor.timeline import record_activity
 from app.services.executor.readme_executor import execute_readme_commit
 from app.services.executor.branch_executor import execute_branch_action
@@ -39,16 +41,25 @@ def execute_plan(
     plan_id: str,
     approved: bool,
     token: Optional[str] = None,
-    rejection_reason: Optional[str] = None
+    rejection_reason: Optional[str] = None,
+    simulate: bool = False
 ) -> Dict[str, Any]:
     """
     Central Safe Execution Coordinator:
     Enforces user approval, dispatches execution, performs verification,
-    and logs receipt into SCM Activity Timeline.
+    prevents duplicate execution, and logs receipt into SCM Activity Timeline.
     """
     plan = _staged_plans.get(plan_id)
     if not plan:
-        raise ValueError(f"Execution plan '{plan_id}' not found. It may have expired or been processed.")
+        raise HTTPException(status_code=404, detail=f"Execution plan '{plan_id}' not found.")
+
+    # Prevent duplicate execution: approved, executing, executed, or rejected plans must never execute again
+    current_status = plan.get("approval_status", "pending")
+    if current_status in ("approved", "executing", "executed", "rejected"):
+        raise HTTPException(
+            status_code=409,
+            detail="Plan already executed."
+        )
 
     if not approved:
         plan["approval_status"] = "rejected"
@@ -77,36 +88,56 @@ def execute_plan(
     payload = plan.get("payload", {})
     repo = plan["repository"]
 
-    logger.info(f"Executing approved plan {plan_id} (action: {action_type}) on {repo}")
+    active_token = token or (settings.GITHUB_TOKEN if settings.has_github_token() else None)
+    is_simulation = simulate or not active_token
+
+    logger.info(f"Executing approved plan {plan_id} (action: {action_type}, simulated: {is_simulation}) on {repo}")
 
     # Dispatch to dedicated executor
     try:
         if action_type == "readme_update":
-            result = execute_readme_commit(payload, token=token)
+            result = execute_readme_commit(payload, token=active_token, simulate=is_simulation)
         elif action_type.startswith("branch_"):
-            result = execute_branch_action(payload, token=token)
+            result = execute_branch_action(payload, token=active_token, simulate=is_simulation)
         elif action_type == "pr_merge":
-            result = execute_pr_merge(payload, token=token)
+            result = execute_pr_merge(payload, token=active_token, simulate=is_simulation)
         elif action_type.startswith("issue_"):
-            result = execute_issue_action(payload, token=token)
+            result = execute_issue_action(payload, token=active_token, simulate=is_simulation)
         elif action_type == "release_publish":
-            result = execute_release_publish(payload, token=token)
+            result = execute_release_publish(payload, token=active_token, simulate=is_simulation)
         elif action_type == "workflow_commit":
-            result = execute_workflow_commit(payload, token=token)
+            result = execute_workflow_commit(payload, token=active_token, simulate=is_simulation)
         elif action_type == "batch_cleanup":
             tasks = payload.get("tasks", [])
             completed_tasks = 0
+            failed_tasks = 0
+            errors = []
             for t in tasks:
-                res = execute_cleanup_task(t, token=token)
+                res = execute_cleanup_task(t, token=active_token, simulate=is_simulation)
                 if res.get("success"):
                     completed_tasks += 1
-            result = {
-                "success": True,
-                "status": "SUCCESS",
-                "summary": f"Completed {completed_tasks}/{len(tasks)} cleanup tasks on {repo}.",
-                "verified": True,
-                "verification_message": f"All {completed_tasks} selected hygiene actions executed and verified."
-            }
+                else:
+                    failed_tasks += 1
+                    err_summary = res.get("summary") or res.get("error_message") or "Cleanup task failed"
+                    errors.append(err_summary)
+
+            if failed_tasks > 0 and completed_tasks == 0:
+                result = {
+                    "success": False,
+                    "status": "FAILED",
+                    "summary": f"All {failed_tasks} cleanup task(s) failed on {repo}: {'; '.join(errors[:2])}",
+                    "verified": False,
+                    "verification_message": f"Execution failed on GitHub remote for cleanup tasks on {repo}."
+                }
+            else:
+                status_name = "SIMULATED" if is_simulation else "SUCCESS"
+                result = {
+                    "success": True,
+                    "status": status_name,
+                    "summary": f"Completed {completed_tasks}/{len(tasks)} cleanup tasks on {repo}.",
+                    "verified": True,
+                    "verification_message": f"All {completed_tasks} selected hygiene actions executed and verified on GitHub remote."
+                }
         else:
             raise ValueError(f"Unknown action type: {action_type}")
 
@@ -124,17 +155,27 @@ def execute_plan(
     plan["approval_status"] = "executed" if result.get("success") else "failed"
     plan["execution_result"] = result
 
+    # Determine status to record into timeline
+    status_to_record = result.get("status")
+    if not status_to_record:
+        if is_simulation:
+            status_to_record = "SIMULATED"
+        elif result.get("success"):
+            status_to_record = "SUCCESS"
+        else:
+            status_to_record = "FAILED"
+
     # Record persistent activity timeline receipt
     activity_entry = record_activity(
         plan_id=plan_id,
         action_type=action_type,
         repository=repo,
-        status=result.get("status", "SUCCESS"),
+        status=status_to_record,
         summary=result.get("summary", plan["title"]),
         commit_sha=result.get("commit_sha"),
         resource_url=result.get("resource_url"),
         details=result,
-        verified=result.get("verified", True),
+        verified=result.get("verified", result.get("success", False)),
         verification_message=result.get("verification_message")
     )
 
@@ -146,3 +187,4 @@ def execute_plan(
         "timeline_id": activity_entry["id"],
         "timestamp": activity_entry["timestamp"]
     }
+

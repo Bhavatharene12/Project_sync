@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Header
 from app.models.repository import RepositoryRequest
 from app.utils.url_parser import parse_github_url
+from app.utils.config import settings
 from app.services.executor.models import (
     TokenVerifyRequest,
     PlanApprovalRequest,
@@ -38,11 +39,15 @@ router = APIRouter(prefix="/github/execute", tags=["GitHub SCM Execution Engine"
 
 
 def _extract_token(auth_header: Optional[Any], body_token: Optional[str] = None) -> Optional[str]:
-    """Helper to extract Bearer token from header or request body."""
+    """Helper to extract Bearer token from header, request body, or server environment."""
     if body_token and isinstance(body_token, str) and body_token.strip():
         return body_token.strip()
     if isinstance(auth_header, str) and auth_header.startswith("Bearer "):
-        return auth_header[7:].strip()
+        token_str = auth_header[7:].strip()
+        if token_str:
+            return token_str
+    if settings.has_github_token():
+        return settings.GITHUB_TOKEN.strip()
     return None
 
 
@@ -102,10 +107,14 @@ def apply_plan_endpoint(
             plan_id=req.plan_id,
             approved=req.approved,
             token=token,
-            rejection_reason=req.rejection_reason
+            rejection_reason=req.rejection_reason,
+            simulate=req.simulate
         )
+    except HTTPException:
+        raise
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
+
 
 
 # -------------------------------------------------------------

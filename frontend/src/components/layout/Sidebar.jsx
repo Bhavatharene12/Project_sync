@@ -6,7 +6,7 @@ function Sidebar() {
 
   const navItems = [
     { name: "Today's Workspace ", path: "/workspace", icon: "⚡", badge: "Daily" },
-    { name: "Risk Analyzer", path: "/risk-analyzer", icon: "🛡️", badge: "Health" },
+    { name: "Risk Analyzer ", path: "/risk-analyzer", icon: "🛡️", badge: "Health" },
     { name: "Release Readiness", path: "/release-readiness", icon: "🚀", badge: "Pre-Flight" },
     { name: "Conflict Predictor", path: "/conflict-predictor", icon: "🔮", badge: "AI" },
     { name: "Team Change Log", path: "/team-sync", icon: "👥" },
